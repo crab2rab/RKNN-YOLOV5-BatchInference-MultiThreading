@@ -6,6 +6,10 @@
 
 
 # 使用说明
+### 模型转换
+  * yolov5工程下export.py转换onnx，直接转，切忌修改batch_size
+  * 参考网上方法，rknn-toolkit2进行onnx转rknn，需要修改./rknn-toolkit2/examples/onnx/test.py为本工程test.py
+
 ### 演示
   * 系统需安装有**OpenCV**，如果需要读取AHD摄像头还需要安装**gstreamer**
   * 运行build-linux_RK3588.sh
