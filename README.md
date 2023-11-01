@@ -14,7 +14,7 @@
   * 系统需安装有**OpenCV**，如果需要读取AHD摄像头还需要安装**gstreamer**
   * 运行build-linux_RK3588.sh
   * 可切换至root用户运行performance.sh定频提高性能和稳定性
-  * 编译完成后进入install运行命令./rknn_yolov5_demo **模型所在路径** **视频所在路径/摄像头序号**
+  * 编译完成后进入install运行命令./rknn_yolov5_demo **模型所在路径**
 
 ### 部署应用
   * 修改include/rknnPool.hpp中的rknn_lite类
