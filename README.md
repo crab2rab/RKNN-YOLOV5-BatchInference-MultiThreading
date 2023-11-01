@@ -1,6 +1,6 @@
 # 简介
 * 此仓库为c++实现yolo5的batch多线程推理, 大体改自https://github.com/leafqycc/rknn-cpp-Multithreading
-* 主要函数为./main.cc ./postprocess.cc(line 197) ./include/rknnPool.hpp(line 168,194,203)
+* 主要修改代码为./main.cc ./postprocess.cc(line 197) ./include/rknnPool.hpp(line 168,194,203)
 
 # 更新说明
 
@@ -18,6 +18,7 @@
 
 # 多线程模型帧率测试
 * 使用performance.sh进行CPU/NPU定频尽量减少误差
+* 设置线程数为8，读取AHD摄像头视频流测试，平均处理速度16.5FPS，八核CPU占用率约500%，三核NPU平均占用率80%
 
 # 补充
 * 异常处理尚未完善, 目前仅支持rk3588/rk3588s下的运行
