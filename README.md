@@ -23,6 +23,8 @@
 # 多线程模型帧率测试
 * 使用performance.sh进行CPU/NPU定频尽量减少误差
 * 设置线程数为8，batch_size=4，读取USB摄像头视频流测试，平均处理速度15.8FPS*4，八核CPU占用率约500%，三核NPU平均占用率75%
+![示例](./view.png)
+
 
 # 补充
 * 异常处理尚未完善, 目前仅支持rk3588/rk3588s下的运行
@@ -35,4 +37,3 @@
 * https://github.com/rockchip-linux/rknn-toolkit2
 * https://github.com/leafqycc/rknn-cpp-Multithreading
 
-![示例](./view.png)
