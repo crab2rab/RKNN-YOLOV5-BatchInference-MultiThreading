@@ -1,6 +1,6 @@
 # 简介
 * 此仓库为c++实现yolo5的batch多线程推理, 大体改自https://github.com/leafqycc/rknn-cpp-Multithreading
-* 主要修改代码为./main.cc ./postprocess.cc(line 197) ./include/rknnPool.hpp(line 168,194,203)
+* 实现4路摄像头的batch=4的推理
 
 # 更新说明
 
@@ -14,7 +14,7 @@
   * 系统需安装有**OpenCV**，如果需要读取AHD摄像头还需要安装**gstreamer**
   * 运行build-linux_RK3588.sh
   * 可切换至root用户运行performance.sh定频提高性能和稳定性
-  * 编译完成后进入install运行命令./rknn_yolov5_demo **模型所在路径** **视频所在路径/摄像头序号**
+  * 编译完成后进入install运行命令./rknn_yolov5_demo **模型所在路径**
 
 ### 部署应用
   * 修改include/rknnPool.hpp中的rknn_lite类
@@ -22,7 +22,7 @@
 
 # 多线程模型帧率测试
 * 使用performance.sh进行CPU/NPU定频尽量减少误差
-* 设置线程数为8，batch_size=4，读取AHD摄像头视频流测试，平均处理速度16.5FPS，八核CPU占用率约500%，三核NPU平均占用率80%
+* 设置线程数为8，batch_size=4，读取USB摄像头视频流测试，平均处理速度15.8FPS*4，八核CPU占用率约500%，三核NPU平均占用率75%
 
 # 补充
 * 异常处理尚未完善, 目前仅支持rk3588/rk3588s下的运行
@@ -34,3 +34,5 @@
 * https://github.com/airockchip/rknn_model_zoo
 * https://github.com/rockchip-linux/rknn-toolkit2
 * https://github.com/leafqycc/rknn-cpp-Multithreading
+
+![示例](./view.png)

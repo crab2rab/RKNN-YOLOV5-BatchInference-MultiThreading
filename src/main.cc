@@ -37,16 +37,31 @@ int main(int argc, char **argv)
   model_name = (char *)argv[1]; // 参数二，模型所在路径
   printf("模型名称:\t%s\n", model_name);
 
-  cv::VideoCapture capture;
-  cv::namedWindow("Camera FPS");
-  // 打开AHD摄像头，对应需要修改rknnPool.hpp里面图像格式转换，cv::COLOR_YUV2BGR_NV12
-  // capture.open("v4l2src device=/dev/video0 ! video/x-raw, format=NV12, width=1920, height=1080, framerate=30/1 ! appsink", cv::CAP_GSTREAMER);
-  // 打开USB摄像头，对应需要修改rknnPool.hpp里面图像格式转换，cv::COLOR_RGB2BGR，或者不需要修改通道顺序，看usb摄像头的输出格式
-  capture.open("/dev/video0");
-  // 打开视频
-  // capture.open("./test.mp4");
+  cv::VideoCapture capture1;
+  capture1.open("/dev/video1", cv::CAP_V4L2);
+  capture1.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+  capture1.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+  cv::namedWindow("Camera FPS 1");
+
+  cv::VideoCapture capture2;
+  capture2.open("/dev/video3", cv::CAP_V4L2);
+  capture2.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+  capture2.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+  cv::namedWindow("Camera FPS 2");
+
+  cv::VideoCapture capture3;
+  capture3.open("/dev/video5", cv::CAP_V4L2);
+  capture3.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+  capture3.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+  cv::namedWindow("Camera FPS 3");
+
+  cv::VideoCapture capture4;
+  capture4.open("/dev/video7", cv::CAP_V4L2);
+  capture4.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+  capture4.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+  cv::namedWindow("Camera FPS 4");
   // 设置线程数
-  int n = 4, frames = 0;
+  int n = 8, frames = 0;
   printf("线程数:\t%d\n", n);
   // 类似于多个rk模型的集合?
   vector<rknn_lite *> rkpool;
@@ -60,7 +75,10 @@ int main(int argc, char **argv)
   {
     rknn_lite *ptr = new rknn_lite(model_name, i % 3);
     rkpool.push_back(ptr);
-    capture >> ptr->ori_img;
+    capture1 >> ptr->ori_img;
+    capture2 >> ptr->ori_img2;
+    capture3 >> ptr->ori_img3;
+    capture4 >> ptr->ori_img4;
     futs.push(pool.submit(&rknn_lite::interf, &(*ptr)));
   }
 
@@ -71,17 +89,24 @@ int main(int argc, char **argv)
   gettimeofday(&time, nullptr);
   long tmpTime, lopTime = time.tv_sec * 1000 + time.tv_usec / 1000;
 
-  while (capture.isOpened())
+  while (capture1.isOpened() && capture2.isOpened() && capture3.isOpened() && capture4.isOpened())
   {
     if (futs.front().get() != 0)
       break;
     futs.pop();
-    cv::imshow("Camera FPS", rkpool[frames % n]->ori_img);
+    cv::imshow("Camera FPS 1", rkpool[frames % n]->ori_img);
+    cv::imshow("Camera FPS 2", rkpool[frames % n]->ori_img2);
+    cv::imshow("Camera FPS 3", rkpool[frames % n]->ori_img3);
+    cv::imshow("Camera FPS 4", rkpool[frames % n]->ori_img4);
     if (cv::waitKey(1) == 'q') // 延时1毫秒,按q键退出
       break;
-    if(!capture.read(rkpool[frames % n]->ori_img))
+
+    if(!capture1.read(rkpool[frames % n]->ori_img) || !capture2.read(rkpool[frames % n]->ori_img2) 
+    || !capture3.read(rkpool[frames % n]->ori_img3) || !capture4.read(rkpool[frames % n]->ori_img4))
       break;
+
     futs.push(pool.submit(&rknn_lite::interf, &(*rkpool[frames++ % n])));
+
     if(frames % 60 == 0){
         gettimeofday(&time, nullptr);
         tmpTime = time.tv_sec * 1000 + time.tv_usec / 1000;
@@ -102,7 +127,10 @@ int main(int argc, char **argv)
   }
   for (int i = 0; i < n; i++)
     delete rkpool[i];
-  capture.release();
+  capture1.release();
+  capture2.release();
+  capture3.release();
+  capture4.release();
   cv::destroyAllWindows();
   return 0;
 }

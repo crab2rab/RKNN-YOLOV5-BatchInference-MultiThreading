@@ -188,16 +188,13 @@ static float deqnt_affine_to_f32(int8_t qnt, int32_t zp, float scale) { return (
 
 static int process(int8_t* input, int* anchor, int grid_h, int grid_w, int height, int width, int stride,
                    std::vector<float>& boxes, std::vector<float>& objProbs, std::vector<int>& classId, float threshold,
-                   int32_t zp, float scale)
+                   int32_t zp, float scale, std::vector<int>& cameraId)
 {
   int    validCount = 0;
   int    grid_len   = grid_h * grid_w;
   float  thres      = unsigmoid(threshold);
   int8_t thres_i8   = qnt_f32_to_affine(thres, zp, scale);
-  // 此处有修改，loop是分别处理batch里面的结果，此处loop=3是为了验证第四张图片的推理结果是否与第一张一致，或者是否有正常推理结果
-  // 可以分别设置loop[0,1),[1,2),[2,3),[3,4)，分别查看结果是否正常
-  // 结果需要分开处理的需要自己写逻辑
-  for(int loop=3; loop<BATCH_SIZE; loop++)
+  for(int loop=0; loop<4; loop++)
   {
       int8_t* loop_ptr = input + loop*(PROP_BOX_SIZE*3)*grid_len;
       for (int a = 0; a < 3; a++) {
@@ -230,6 +227,7 @@ static int process(int8_t* input, int* anchor, int grid_h, int grid_w, int heigh
               if (maxClassProbs>thres_i8){
                 objProbs.push_back(sigmoid(deqnt_affine_to_f32(maxClassProbs, zp, scale))* sigmoid(deqnt_affine_to_f32(box_confidence, zp, scale)));
                 classId.push_back(maxClassId);
+                cameraId.push_back(loop+1);
                 validCount++;
                 boxes.push_back(box_x);
                 boxes.push_back(box_y);
@@ -263,14 +261,16 @@ int post_process(int8_t* input0, int8_t* input1, int8_t* input2, int model_in_h,
   std::vector<float> filterBoxes;
   std::vector<float> objProbs;
   std::vector<int>   classId;
+  std::vector<int>   cameraId;
 
   // stride 8
   int stride0     = 8;
   int grid_h0     = model_in_h / stride0;
   int grid_w0     = model_in_w / stride0;
+  // int validCount = 0;
   int validCount0 = 0;
   validCount0 = process(input0, (int*)anchor0, grid_h0, grid_w0, model_in_h, model_in_w, stride0, filterBoxes, objProbs,
-                        classId, conf_threshold, qnt_zps[0], qnt_scales[0]);
+                        classId, conf_threshold, qnt_zps[0], qnt_scales[0], cameraId);
 
   // stride 16
   int stride1     = 16;
@@ -278,7 +278,7 @@ int post_process(int8_t* input0, int8_t* input1, int8_t* input2, int model_in_h,
   int grid_w1     = model_in_w / stride1;
   int validCount1 = 0;
   validCount1 = process(input1, (int*)anchor1, grid_h1, grid_w1, model_in_h, model_in_w, stride1, filterBoxes, objProbs,
-                        classId, conf_threshold, qnt_zps[1], qnt_scales[1]);
+                        classId, conf_threshold, qnt_zps[1], qnt_scales[1], cameraId);
 
   // stride 32
   int stride2     = 32;
@@ -286,7 +286,7 @@ int post_process(int8_t* input0, int8_t* input1, int8_t* input2, int model_in_h,
   int grid_w2     = model_in_w / stride2;
   int validCount2 = 0;
   validCount2 = process(input2, (int*)anchor2, grid_h2, grid_w2, model_in_h, model_in_w, stride2, filterBoxes, objProbs,
-                        classId, conf_threshold, qnt_zps[2], qnt_scales[2]);
+                        classId, conf_threshold, qnt_zps[2], qnt_scales[2], cameraId);
 
   int validCount = validCount0 + validCount1 + validCount2;
   // no object detect
@@ -322,7 +322,8 @@ int post_process(int8_t* input0, int8_t* input1, int8_t* input2, int model_in_h,
     float y2       = y1 + filterBoxes[n * 4 + 3];
     int   id       = classId[n];
     float obj_conf = objProbs[i];
-
+    int cameraid = cameraId[n];
+    
     group->results[last_count].box.left   = (int)(clamp(x1, 0, model_in_w) / scale_w);
     group->results[last_count].box.top    = (int)(clamp(y1, 0, model_in_h) / scale_h);
     group->results[last_count].box.right  = (int)(clamp(x2, 0, model_in_w) / scale_w);
@@ -330,7 +331,8 @@ int post_process(int8_t* input0, int8_t* input1, int8_t* input2, int model_in_h,
     group->results[last_count].prop       = obj_conf;
     char* label                           = labels[id];
     strncpy(group->results[last_count].name, label, OBJ_NAME_MAX_SIZE);
-
+    group->results[last_count].cameraid=cameraid;
+    // std::cout << "++++++++" << cameraid << std::endl;
 //     printf("result %2d: (%4d, %4d, %4d, %4d), %s\n", i, group->results[last_count].box.left,
 //     group->results[last_count].box.top,
 //            group->results[last_count].box.right, group->results[last_count].box.bottom, label);

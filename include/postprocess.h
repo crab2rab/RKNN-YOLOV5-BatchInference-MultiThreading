@@ -7,10 +7,9 @@
 #define OBJ_NAME_MAX_SIZE 16
 #define OBJ_NUMB_MAX_SIZE 64
 #define OBJ_CLASS_NUM     80
-#define NMS_THRESH        0.45
-#define BOX_THRESH        0.25
+#define NMS_THRESH        0.50
+#define BOX_THRESH        0.20
 #define PROP_BOX_SIZE     (5+OBJ_CLASS_NUM)
-#define BATCH_SIZE 4
 
 typedef struct _BOX_RECT
 {
@@ -25,6 +24,7 @@ typedef struct __detect_result_t
     char name[OBJ_NAME_MAX_SIZE];
     BOX_RECT box;
     float prop;
+    int cameraid;
 } detect_result_t;
 
 typedef struct _detect_result_group_t

@@ -37,6 +37,9 @@ private:
     int height = 0;
 public:
     Mat ori_img;
+    Mat ori_img2;
+    Mat ori_img3;
+    Mat ori_img4;
     int interf();
     rknn_lite(char *dst, int n);
     ~rknn_lite();
@@ -150,64 +153,139 @@ rknn_lite::~rknn_lite()
 int rknn_lite::interf()
 {
     // cv::cvtColor(ori_img, ori_img, cv::COLOR_YUV2BGR_NV12);
-    cv::cvtColor(ori_img, ori_img, cv::COLOR_RGB2BGR);
     int img_width = ori_img.cols;
     int img_height = ori_img.rows;
     cv::Mat img = ori_img;
+    cv::Mat img2 = ori_img2;
+    cv::Mat img3 = ori_img3;
+    cv::Mat img4 = ori_img4;
     // init rga context
     // rga是rk自家的绘图库,绘图效率高于OpenCV
     rga_buffer_t src;
     rga_buffer_t dst;
     memset(&src, 0, sizeof(src));
     memset(&dst, 0, sizeof(dst));
+    rga_buffer_t src2;
+    rga_buffer_t dst2;
+    memset(&src2, 0, sizeof(src2));
+    memset(&dst2, 0, sizeof(dst2));
+    rga_buffer_t src3;
+    rga_buffer_t dst3;
+    memset(&src3, 0, sizeof(src3));
+    memset(&dst3, 0, sizeof(dst3));
+    rga_buffer_t src4;
+    rga_buffer_t dst4;
+    memset(&src4, 0, sizeof(src4));
+    memset(&dst4, 0, sizeof(dst4));
+
+
     im_rect src_rect;
     im_rect dst_rect;
     memset(&src_rect, 0, sizeof(src_rect));
     memset(&dst_rect, 0, sizeof(dst_rect));
+    im_rect src_rect2;
+    im_rect dst_rect2;
+    memset(&src_rect2, 0, sizeof(src_rect2));
+    memset(&dst_rect2, 0, sizeof(dst_rect2));
+    im_rect src_rect3;
+    im_rect dst_rect3;
+    memset(&src_rect3, 0, sizeof(src_rect3));
+    memset(&dst_rect3, 0, sizeof(dst_rect3));
+    im_rect src_rect4;
+    im_rect dst_rect4;
+    memset(&src_rect4, 0, sizeof(src_rect4));
+    memset(&dst_rect4, 0, sizeof(dst_rect4));
 
-    // 申明存储batch_size张图片的内存地址以及单张图片的内存地址，为了简化，就没有输入四张不一样的图像，如果是四张不一样的，resize_buf应该申请四份
+    // You may not need resize when src resulotion equals to dst resulotion
     void *resize_buf = nullptr;
+    void *resize_buf2 = nullptr;
+    void *resize_buf3 = nullptr;
+    void *resize_buf4 = nullptr;
+
     int img_size = input_attrs[0].dims[1] * input_attrs[0].dims[2] * input_attrs[0].dims[3] * sizeof(uint8_t);
     unsigned char *in_data_batch = NULL;
-    in_data_batch = (unsigned char *)malloc(BATCH_SIZE * img_size);
+    in_data_batch = (unsigned char *)malloc(4 * img_size);
     if (!in_data_batch)
     {
         return -1;
     }
-    // You may not need resize when src resulotion equals to dst resulotion
     // 如果输入图像不是指定格式
     if (img_width !=  width || img_height !=  height)
     {
         resize_buf = malloc( height *  width *  channel);
         memset(resize_buf, 0x00,  height *  width *  channel);
+        resize_buf2 = malloc( height *  width *  channel);
+        memset(resize_buf2, 0x00,  height *  width *  channel);
+        resize_buf3 = malloc( height *  width *  channel);
+        memset(resize_buf3, 0x00,  height *  width *  channel);
+        resize_buf4 = malloc( height *  width *  channel);
+        memset(resize_buf4, 0x00,  height *  width *  channel);
 
         src = wrapbuffer_virtualaddr((void *)img.data, img_width, img_height, RK_FORMAT_RGB_888);
         dst = wrapbuffer_virtualaddr((void *)resize_buf,  width,  height, RK_FORMAT_RGB_888);
+        src2 = wrapbuffer_virtualaddr((void *)img2.data, img_width, img_height, RK_FORMAT_RGB_888);
+        dst2 = wrapbuffer_virtualaddr((void *)resize_buf2,  width,  height, RK_FORMAT_RGB_888);
+        src3 = wrapbuffer_virtualaddr((void *)img3.data, img_width, img_height, RK_FORMAT_RGB_888);
+        dst3 = wrapbuffer_virtualaddr((void *)resize_buf3,  width,  height, RK_FORMAT_RGB_888);
+        src4 = wrapbuffer_virtualaddr((void *)img4.data, img_width, img_height, RK_FORMAT_RGB_888);
+        dst4 = wrapbuffer_virtualaddr((void *)resize_buf4,  width,  height, RK_FORMAT_RGB_888);
+
         ret = imcheck(src, dst, src_rect, dst_rect);
+        ret = imcheck(src2, dst2, src_rect2, dst_rect2);
+        ret = imcheck(src3, dst3, src_rect3, dst_rect3);
+        ret = imcheck(src4, dst4, src_rect4, dst_rect4);
+
         if (IM_STATUS_NOERROR !=  ret)
         {
             printf("%d, check error! %s", __LINE__, imStrError((IM_STATUS) ret));
             exit(-1);
         }
         IM_STATUS STATUS = imresize(src, dst);
-        cv::Mat resize_img(cv::Size( width,  height), CV_8UC3, resize_buf);
-        // 将四张图片依次存入in_data_batch的连续内存中
-        for (int i = 0; i < BATCH_SIZE; ++i)
+        if (IM_STATUS_NOERROR !=  ret)
         {
-            unsigned char *in_data_ptr = in_data_batch + img_size * i;
-            memcpy(in_data_ptr, resize_buf, img_size);
+            printf("%d, check error! %s", __LINE__, imStrError((IM_STATUS) ret));
+            exit(-1);
         }
-            inputs[0].buf = in_data_batch;
+        IM_STATUS STATUS2 = imresize(src2, dst2);
+        if (IM_STATUS_NOERROR !=  ret)
+        {
+            printf("%d, check error! %s", __LINE__, imStrError((IM_STATUS) ret));
+            exit(-1);
         }
-        else{
-            // 将四张图片依次存入in_data_batch的连续内存中
-            for (int i = 0; i < BATCH_SIZE; ++i)
-            {
-                unsigned char *in_data_ptr = in_data_batch + img_size * i;
-                memcpy(in_data_ptr, img.data, img_size);
-            }
+        IM_STATUS STATUS3 = imresize(src3, dst3);
+        if (IM_STATUS_NOERROR !=  ret)
+        {
+            printf("%d, check error! %s", __LINE__, imStrError((IM_STATUS) ret));
+            exit(-1);
+        }
+        IM_STATUS STATUS4 = imresize(src4, dst4);
+
+        cv::Mat resize_img(cv::Size( width,  height), CV_8UC3, resize_buf);
+        cv::Mat resize_img2(cv::Size( width,  height), CV_8UC3, resize_buf2);
+        cv::Mat resize_img3(cv::Size( width,  height), CV_8UC3, resize_buf3);
+        cv::Mat resize_img4(cv::Size( width,  height), CV_8UC3, resize_buf4);
+
+        unsigned char *in_data_ptr = in_data_batch;
+        memcpy(in_data_ptr, resize_buf, img_size);
+        in_data_ptr += img_size;
+        memcpy(in_data_ptr, resize_buf2, img_size);
+        in_data_ptr += img_size;
+        memcpy(in_data_ptr, resize_buf3, img_size);
+        in_data_ptr += img_size;
+        memcpy(in_data_ptr, resize_buf4, img_size);
+        inputs[0].buf = in_data_batch;
+    }
+    else{
+            unsigned char *in_data_ptrx = in_data_batch;
+            memcpy(in_data_ptrx, img.data, img_size);
+            in_data_ptrx += img_size;
+            memcpy(in_data_ptrx, img2.data, img_size);
+            in_data_ptrx += img_size;
+            memcpy(in_data_ptrx, img3.data, img_size);
+            in_data_ptrx += img_size;
+            memcpy(in_data_ptrx, img4.data, img_size);
             inputs[0].buf = in_data_batch;
-            }
+         }
 
     // 设置rknn的输入数据
     rknn_inputs_set( rkModel,  io_num.n_input,  inputs);
@@ -247,6 +325,7 @@ int rknn_lite::interf()
     for (int i = 0; i < detect_result_group.count; i++)
     {
         detect_result_t *det_result = &(detect_result_group.results[i]);
+        // sprintf(text, "%s %.1f%%", det_result->name,free(resize_buf); det_result->prop * 100);
         if (!strncmp(det_result->name,"person",6))
         {
           int x1 = det_result->box.left;
@@ -254,14 +333,36 @@ int rknn_lite::interf()
           std::vector<int> kuang = {det_result->box.left, det_result->box.top, det_result->box.right, det_result->box.bottom};
           
           sprintf(text, "%s %.1f%%", det_result->name, det_result->prop * 100);
-          rectangle(ori_img, cv::Point(x1, y1), cv::Point(det_result->box.right, det_result->box.bottom), cv::Scalar(0, 0, 255, 0), 3);
-          putText(ori_img, text, cv::Point(x1, y1 + 12), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255));
+          switch (det_result->cameraid)
+          {
+          case 1:
+            rectangle(ori_img, cv::Point(x1, y1), cv::Point(det_result->box.right, det_result->box.bottom), cv::Scalar(0, 0, 255, 0), 3);
+            putText(ori_img, text, cv::Point(x1, y1 + 12), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255));
+            break;
+          case 2:
+            rectangle(ori_img2, cv::Point(x1, y1), cv::Point(det_result->box.right, det_result->box.bottom), cv::Scalar(0, 0, 255, 0), 3);
+            putText(ori_img2, text, cv::Point(x1, y1 + 12), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255));
+            break;
+          case 3:
+            rectangle(ori_img3, cv::Point(x1, y1), cv::Point(det_result->box.right, det_result->box.bottom), cv::Scalar(0, 0, 255, 0), 3);
+            putText(ori_img3, text, cv::Point(x1, y1 + 12), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255));
+            break;
+          case 4:
+            rectangle(ori_img4, cv::Point(x1, y1), cv::Point(det_result->box.right, det_result->box.bottom), cv::Scalar(0, 0, 255, 0), 3);
+            putText(ori_img4, text, cv::Point(x1, y1 + 12), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255));
+            break;
+          default:
+            break;
+          }
         }
     }
      ret = rknn_outputs_release( rkModel,  io_num.n_output, outputs);
     if (resize_buf)
     {
         free(resize_buf);
+        free(resize_buf2);
+        free(resize_buf3);
+        free(resize_buf4);
         free(in_data_batch);
     }
     return 0;
